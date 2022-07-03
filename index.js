@@ -4,18 +4,13 @@ const app = express();
 
 app.use(express.json());
 
-
-app.get('/hello', (req, res) =>{
-    res.send("Hi there")
-})
-
 app.post('/split-payments/compute', (req, res) =>{
     const schema = Joi.object({
         ID: Joi.number().integer().required(),
         Amount: Joi.number().integer().min(0).required(),
         Currency: Joi.string().required(),
         CustomerEmail: Joi.string().email().required(),
-        SplitInfo: Joi.array().required()
+        SplitInfo: Joi.array().min(1).max(20).required()
     });
 
     const validation = schema.validate(req.body);
@@ -61,13 +56,14 @@ app.post('/split-payments/compute', (req, res) =>{
         
         for(i = 0; i < length; i++){
             if (transaction.SplitInfo[i].SplitType == "RATIO"){   
-                Balance = Balance - ((transaction.SplitInfo[i].SplitValue/Totalratio) * RatioBalance) 
-                SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: ((transaction.SplitInfo[i].SplitValue/Totalratio) * RatioBalance)})
+            Balance = Balance - ((transaction.SplitInfo[i].SplitValue / Totalratio) * RatioBalance)
+            SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: ((transaction.SplitInfo[i].SplitValue/Totalratio) * RatioBalance)})
             }
-            console.log(RatioBalance)
         }
 
-
+        if(Balance < 0) {
+            res.status(400).send("Balance can not be less than 0")
+        }
     }
 
     compute(transaction)
