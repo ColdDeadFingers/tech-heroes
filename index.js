@@ -91,7 +91,7 @@ app.post('/split-payments/compute', (req, res) =>{
 
 
     compute(transaction)
-    console.log(TotalSplitValue)
+    
 
     res.send({
         ID : req.body.ID,
