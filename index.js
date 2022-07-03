@@ -6,20 +6,6 @@ app.use(express.json());
 
 
 app.post('/split-payments/compute', (req, res) =>{
-    const schema = Joi.object({
-        ID: Joi.number().integer().required(),
-        Amount: Joi.number().integer().min(0).required(),
-        Currency: Joi.string().required(),
-        CustomerEmail: Joi.string().email().required(),
-        SplitInfo: Joi.array().required()
-    });
-
-    const validation = schema.validate(req.body);
-    if(validation.error) {
-        res.status(400).send(validation.error.details[0].message)
-    }
-   
-
     const transaction = {
         ID: req.body.ID,
         Amount: req.body.Amount,
