@@ -5,6 +5,10 @@ const app = express();
 app.use(express.json());
 
 
+app.get('/hello', (req, res) =>{
+    res.send("Hi there")
+})
+
 app.post('/split-payments/compute', (req, res) =>{
     const schema = Joi.object({
         ID: Joi.number().integer().required(),
