@@ -30,17 +30,28 @@ app.post('/split-payments/compute', (req, res) =>{
     let Totalratio = 0;
     let Balance = req.body.Amount;
     let SplitBreakdown = []
+    let TotalSplitValue = []
     const compute = (transaction) => {
     
         let length = transaction.SplitInfo.length;
         for(i = 0; i < length; i++){
             if (transaction.SplitInfo[i].SplitType == "FLAT"){
+                let computeFlat = Balance - transaction.SplitInfo[i].SplitValue
+                if(computeFlat < 0){
+                    res.status(400).send(`Split amount for ${transaction.SplitInfo[i].SplitEntityId} is greater than transaction amount or less than 0`)
+                }
+                TotalSplitValue.push(transaction.SplitInfo[i].SplitValue)
                 Balance = Balance - transaction.SplitInfo[i].SplitValue 
                 SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: transaction.SplitInfo[i].SplitValue})
             }
         }
         for(i = 0; i < length; i++){
             if (transaction.SplitInfo[i].SplitType == "PERCENTAGE"){    
+                let computePer = Balance - ((transaction.SplitInfo[i].SplitValue/100) * Balance) 
+                if (computePer < 0){
+                    res.status(400).send(`Split amount for ${transaction.SplitInfo[i].SplitEntityId} is greater than transaction amount or less than 0`)
+                }
+                TotalSplitValue.push(((transaction.SplitInfo[i].SplitValue/100) * Balance) )
                 Balance = Balance - ((transaction.SplitInfo[i].SplitValue/100) * Balance) 
                 SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: ((transaction.SplitInfo[i].SplitValue/100) * Balance)})
                 
@@ -56,17 +67,31 @@ app.post('/split-payments/compute', (req, res) =>{
         
         for(i = 0; i < length; i++){
             if (transaction.SplitInfo[i].SplitType == "RATIO"){   
-            Balance = Balance - ((transaction.SplitInfo[i].SplitValue / Totalratio) * RatioBalance)
-            SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: ((transaction.SplitInfo[i].SplitValue/Totalratio) * RatioBalance)})
+                let computeRatio = Balance - ((transaction.SplitInfo[i].SplitValue / Totalratio) * RatioBalance)
+                if(computeRatio < 0){
+                    res.status(400).send(`Split amount for ${transaction.SplitInfo[i].SplitEntityId} is greater than transaction amount or less than 0`) 
+                }
+                TotalSplitValue.push(((transaction.SplitInfo[i].SplitValue / Totalratio) * RatioBalance))
+                Balance = Balance - ((transaction.SplitInfo[i].SplitValue / Totalratio) * RatioBalance)
+                SplitBreakdown.push({SplitEntityId: transaction.SplitInfo[i].SplitEntityId, Amount: ((transaction.SplitInfo[i].SplitValue/Totalratio) * RatioBalance)})
             }
         }
 
         if(Balance < 0) {
             res.status(400).send("Balance can not be less than 0")
         }
+
+        const reducer = (accumulator, curr) => accumulator + curr;
+        const totalSum = TotalSplitValue.reduce(reducer);
+
+        if(totalSum > transaction.Amount){
+            res.status(400).send("Total split values computed greater than transaction amount")
+        }
     }
 
+
     compute(transaction)
+    console.log(TotalSplitValue)
 
     res.send({
         ID : req.body.ID,
